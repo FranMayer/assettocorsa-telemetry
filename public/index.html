@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PITWALL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --lcd-red:    #c00;
+  --lcd-green:  #0f0;
+  --lcd-yellow: #ff0;
+  --lcd-white:  #fff;
+  --lcd-gray:   #888;
+  --lcd-dim:    #333;
+  --lcd-border: #666;
+  --bg:         #000;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--lcd-white);
+  overflow: hidden;
+  -webkit-text-size-adjust: none;
+  touch-action: none;
+  user-select: none;
+}
+
+/* iPad landscape 1024×768 — single screen, no scroll */
+#dash {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  display: grid;
+  grid-template-rows: 40px minmax(0, 1fr) 52px minmax(100px, 22vh);
+  grid-template-columns: 1fr;
+}
+
+/* ── SHIFT LIGHT BAR (full width) ── */
+#rpm-strip {
+  display: flex;
+  align-items: center;
+  justify-content: stretch;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #000;
+  border-bottom: 1px solid var(--lcd-border);
+}
+
+.led {
+  flex: 1;
+  height: 22px;
+  min-width: 0;
+  background: var(--lcd-dim);
+  border: 1px solid #444;
+}
+
+.led.lit-green  { background: var(--lcd-green);  border-color: #080; }
+.led.lit-yellow { background: var(--lcd-yellow); border-color: #880; }
+.led.lit-red    { background: var(--lcd-red);    border-color: #800; }
+
+@keyframes shiftBlink {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0.2; }
+}
+
+#rpm-strip.shift .led.lit-green,
+#rpm-strip.shift .led.lit-yellow,
+#rpm-strip.shift .led.lit-red {
+  background: var(--lcd-red);
+  border-color: #800;
+  animation: shiftBlink 0.15s steps(2) infinite;
+}
+
+/* ── Row: GEAR | SPEED | TIMES ── */
+#row-main {
+  display: grid;
+  grid-template-columns: minmax(160px, 22%) 1fr minmax(200px, 28%);
+  min-height: 0;
+  border-bottom: 1px solid var(--lcd-border);
+}
+
+#col-gear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--lcd-border);
+  padding: 8px;
+}
+
+#gear-display {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: clamp(72px, 14vw, 160px);
+  line-height: 1;
+  color: var(--lcd-red);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+#col-speed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--lcd-border);
+  padding: 8px;
+}
+
+#speed-value {
+  font-family: 'Orbitron', monospace;
+  font-weight: 800;
+  font-size: clamp(64px, 12vw, 140px);
+  line-height: 0.95;
+  color: var(--lcd-white);
+  letter-spacing: 0.04em;
+}
+
+#speed-unit {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: var(--lcd-gray);
+  margin-top: 4px;
+}
+
+#col-times {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 14px;
+  min-height: 0;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.time-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--lcd-gray);
+}
+
+#lap-num {
+  letter-spacing: 0;
+  color: var(--lcd-yellow);
+  font-weight: 700;
+}
+
+.time-val {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: clamp(16px, 2.6vw, 22px);
+  letter-spacing: 0.06em;
+  color: var(--lcd-white);
+}
+
+/* Current lap: primary red */
+#time-current { color: var(--lcd-red); }
+
+#time-best.is-record { color: var(--lcd-green); }
+#time-best.no-record { color: var(--lcd-yellow); }
+
+#time-last { color: var(--lcd-gray); }
+
+/* ── RPM bar row ── */
+#row-rpm {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  background: #000;
+  border-bottom: 1px solid var(--lcd-border);
+}
+
+#rpm-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--lcd-gray);
+  flex-shrink: 0;
+}
+
+#rpm-track {
+  flex: 1;
+  height: 28px;
+  background: var(--lcd-dim);
+  border: 1px solid var(--lcd-border);
+  position: relative;
+  overflow: hidden;
+}
+
+#rpm-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: 0;
+  width: 0%;
+  background: var(--lcd-red);
+  transition: width 0.05s linear;
+}
+
+#rpm-num {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--lcd-white);
+  min-width: 5.5ch;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Pedals: vertical fill from bottom ── */
+#row-pedals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 0;
+  border-top: 1px solid var(--lcd-border);
+}
+
+.pedal-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 16px 14px;
+  min-height: 0;
+}
+
+.pedal-panel:first-child { border-right: 1px solid var(--lcd-border); }
+
+.pedal-title {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--lcd-gray);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.pedal-track {
+  width: 44px;
+  flex: 1;
+  min-height: 60px;
+  max-height: 100%;
+  background: var(--lcd-dim);
+  border: 1px solid var(--lcd-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.pedal-fill {
+  width: 100%;
+  height: 0%;
+  transition: height 0.04s linear;
+}
+
+#gas-fill   { background: var(--lcd-green); }
+#brake-fill { background: var(--lcd-red); }
+
+/* Connection */
+#conn {
+  position: fixed;
+  top: 8px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--lcd-gray);
+  z-index: 999;
+  pointer-events: none;
+}
+
+#conn-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lcd-red);
+  border: 1px solid #600;
+}
+
+#conn-dot.ok {
+  background: var(--lcd-green);
+  border-color: #060;
+}
+
+@keyframes connBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+#conn-dot.no-data {
+  animation: connBlink 1s step-end infinite;
+}
+</style>
+</head>
+<body>
+
+<div id="dash">
+  <div id="rpm-strip" aria-hidden="true"></div>
+
+  <div id="row-main">
+    <div id="col-gear">
+      <div id="gear-display">N</div>
+    </div>
+    <div id="col-speed">
+      <div id="speed-value">0</div>
+      <div id="speed-unit">KM/H</div>
+    </div>
+    <div id="col-times">
+      <div class="time-row">
+        <span class="time-label">LAP<span id="lap-num"></span></span>
+        <span class="time-val" id="time-current">-:--.---</span>
+      </div>
+      <div class="time-row">
+        <span class="time-label">BEST</span>
+        <span class="time-val no-record" id="time-best">-:--.---</span>
+      </div>
+      <div class="time-row">
+        <span class="time-label">LAST</span>
+        <span class="time-val" id="time-last">-:--.---</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="row-rpm">
+    <span id="rpm-label">RPM</span>
+    <div id="rpm-track"><div id="rpm-fill"></div></div>
+    <span id="rpm-num">0</span>
+  </div>
+
+  <div id="row-pedals">
+    <div class="pedal-panel">
+      <div class="pedal-title">GAS</div>
+      <div class="pedal-track"><div class="pedal-fill" id="gas-fill"></div></div>
+    </div>
+    <div class="pedal-panel">
+      <div class="pedal-title">FRENO</div>
+      <div class="pedal-track"><div class="pedal-fill" id="brake-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="conn">
+  <div id="conn-dot" class="no-data"></div>
+  <span id="conn-text">SIN SEÑAL</span>
+</div>
+
+<script>
+'use strict';
+
+const RPM_MAX      = 8000;
+const LED_COUNT    = 20;
+const SHIFT_THRESH = 0.90;
+
+function ledZoneColor(idx) {
+  const pos = (idx + 1) / LED_COUNT;
+  if (pos <= 0.60) return 'green';
+  if (pos <= 0.85) return 'yellow';
+  return 'red';
+}
+
+const $strip = document.getElementById('rpm-strip');
+const leds   = [];
+
+for (let i = 0; i < LED_COUNT; i++) {
+  const d = document.createElement('div');
+  d.className = 'led';
+  d.dataset.color = ledZoneColor(i);
+  $strip.appendChild(d);
+  leds.push(d);
+}
+
+function updateLEDs(rpms) {
+  const pct   = Math.min(rpms / RPM_MAX, 1);
+  const shift = pct >= SHIFT_THRESH;
+
+  $strip.classList.toggle('shift', shift);
+
+  const litCount = Math.round(pct * LED_COUNT);
+  leds.forEach((led, i) => {
+    if (i < litCount) {
+      led.className = 'led lit-' + led.dataset.color;
+    } else {
+      led.className = 'led';
+    }
+  });
+}
+
+const $speed    = document.getElementById('speed-value');
+const $gear     = document.getElementById('gear-display');
+const $gas      = document.getElementById('gas-fill');
+const $brake    = document.getElementById('brake-fill');
+const $rpmFill  = document.getElementById('rpm-fill');
+const $rpmNum   = document.getElementById('rpm-num');
+const $lapNum   = document.getElementById('lap-num');
+const $curTime  = document.getElementById('time-current');
+const $bestTime = document.getElementById('time-best');
+const $lastTime = document.getElementById('time-last');
+const $connDot  = document.getElementById('conn-dot');
+const $connTxt  = document.getElementById('conn-text');
+
+function formatLap(ms) {
+  if (!ms || ms <= 0) return '-:--.---';
+  const m   = Math.floor(ms / 60000);
+  const s   = Math.floor((ms % 60000) / 1000);
+  const mil = Math.floor(ms % 1000);
+  return m + ':' + String(s).padStart(2, '0') + '.' + String(mil).padStart(3, '0');
+}
+
+function gearLabel(g) {
+  if (g === 0) return 'R';
+  if (g === 1) return 'N';
+  return String(g - 1);
+}
+
+function render(d) {
+  $speed.textContent = Math.round(d.speed);
+
+  updateLEDs(d.rpms);
+
+  const pct = Math.min(d.rpms / RPM_MAX, 1);
+  $rpmFill.style.width = (pct * 100).toFixed(2) + '%';
+  $rpmNum.textContent  = Math.round(d.rpms);
+
+  $gear.textContent = gearLabel(d.gear);
+
+  $gas.style.height   = Math.round(d.throttle * 100) + '%';
+  $brake.style.height = Math.round(d.brake * 100) + '%';
+
+  $curTime.textContent  = formatLap(d.lapTime);
+  $bestTime.textContent = formatLap(d.bestLap);
+  $lastTime.textContent = formatLap(d.lastLap);
+
+  $lapNum.textContent = d.lapCount > 0 ? ' ' + d.lapCount : '';
+
+  const hasBest = d.bestLap > 0;
+  $bestTime.classList.toggle('is-record', hasBest);
+  $bestTime.classList.toggle('no-record', !hasBest);
+}
+
+let noDataTimer = null;
+
+function setConn(ok, noData) {
+  $connDot.className = ok ? 'ok' : (noData ? 'no-data' : '');
+  $connTxt.textContent = ok ? 'CONECTADO' : 'SIN SEÑAL';
+}
+
+function resetDataTimer() {
+  clearTimeout(noDataTimer);
+  noDataTimer = setTimeout(function () { setConn(false, true); }, 2000);
+}
+
+let ws;
+let reconnectDelay = 1000;
+
+function connect() {
+  ws = new WebSocket('ws://' + location.hostname + ':' + (location.port || 3000));
+
+  ws.onopen = function () {
+    setConn(true);
+    reconnectDelay = 1000;
+  };
+
+  ws.onmessage = function (ev) {
+    try {
+      const d = JSON.parse(ev.data);
+      if (d._lapCompleted) return;
+      resetDataTimer();
+      setConn(true);
+      render(d);
+    } catch (_) {}
+  };
+
+  ws.onclose = function () {
+    setConn(false);
+    clearTimeout(noDataTimer);
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+  };
+
+  ws.onerror = function () { ws.close(); };
+}
+
+connect();
+</script>
+</body>
+</html>
